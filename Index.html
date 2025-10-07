@@ -1,22 +1,73 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Map and Food Rating List of Singapore Hawker Centers</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新加坡PSI数据表格</title>
+    <!-- 引入D3.js库（使用CDN，无需本地下载） -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* 简单样式优化表格可读性 */
+        table { border-collapse: collapse; width: 80%; margin: 20px auto; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:hover { background-color: #f9f9f9; }
+        .loading { text-align: center; margin-top: 50px; font-size: 18px; color: #666; }
+    </style>
 </head>
 <body>
-<h1>Map and Food Rating List of Singapore Hawker Centers</h1>
-<h3>Project goals</h3>
-<p>Information about Singapore's hawker centers, including their locations, stall types, and sizes, is difficult to visually represent on map apps. Even tourists and locals often struggle to locate hawker centers through map navigation, making it time-consuming for users to find their ideal options. This project aims to utilize data visualization to present the distribution, stall types, and sizes of over 50 hawker centers in Singapore. By building interactive features such as filtering and photo display, it helps users make more effective dining decisions.</p >
-<h3>Project Process</h3>
-<p>1. Collect information about hawker centers in Singapore, including their locations, types of stalls, sizes, and operating hours.</p >
-<p>2. Mark hawker centers on a map of Singapore and use colors to distinguish between different size and rating levels (for example, gold for centers with more than 30 stalls and green for centers with 10 or fewer stalls).</p >
-<p>3. Add filtering options to allow users to select their preferred criteria (such as proximity to Bedok, golden scale, or specific cuisine, such as Hainanese chicken rice).</p >
-<p>4. When the user clicks on a snack center on the map, photos of the overall stall scale, names of all stalls, and detailed addresses will be displayed.</p >
-<ul>
-<h2></h2>
-</ul>
+    <div class="loading">正在加载PSI数据...</div>
+    <div id="table-container"></div>
+
+    <script>
+        // 1. 调用新加坡PSI数据API
+        d3.json("https://api.data.gov.sg/v1/environment/psi")
+            .then(data => {
+                // 隐藏加载提示
+                document.querySelector(".loading").style.display = "none";
+
+                // 2. 提取核心数据（取最新时间节点的24小时PSI值）
+                const latestData = data.items[0]; // API返回的最新数据项
+                const timestamp = latestData.timestamp; // 数据时间戳
+                const psiReadings = latestData.readings.psi_twenty_four_hourly; // 各区域24小时PSI值
+
+                // 3. 整理表格数据格式（每行包含：时间、区域、PSI值）
+                const tableData = Object.entries(psiReadings).map(([region, value]) => ({
+                    time: timestamp,
+                    region: region.replace("_", " "), // 优化区域名显示（如north_east→north east）
+                    psi: value
+                }));
+
+                // 4. 用D3创建表格
+                const table = d3.select("#table-container")
+                    .append("table");
+
+                // 表头
+                const thead = table.append("thead")
+                    .append("tr");
+                thead.selectAll("th")
+                    .data(["数据时间", "区域", "24小时PSI值"]) // 表头文本
+                    .enter()
+                    .append("th")
+                    .text(d => d);
+
+                // 表格内容
+                const tbody = table.append("tbody");
+                tbody.selectAll("tr")
+                    .data(tableData)
+                    .enter()
+                    .append("tr")
+                    .selectAll("td")
+                    .data(d => [d.time, d.region, d.psi]) // 每行对应的3列数据
+                    .enter()
+                    .append("td")
+                    .text(d => d);
+            })
+            .catch(error => {
+                // 加载失败提示
+                document.querySelector(".loading").textContent = "数据加载失败，请刷新重试";
+                console.error("API请求错误：", error);
+            });
+    </script>
 </body>
-</ul>
 </html>
